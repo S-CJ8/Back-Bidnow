@@ -1,7 +1,8 @@
-# UTF-8 (sin BOM). El archivo anterior en UTF-16 hacÃ­a que Render no instalara bien las dependencias.
+# UTF-8 (sin BOM). El archivo anterior en UTF-16 hacía que Render no instalara bien las dependencias.
 Django>=5.2,<6
 djangorestframework>=3.15
 drf-spectacular>=0.27
 psycopg2-binary>=2.9
 python-dotenv>=1.0
 gunicorn>=22,<26
+whitenoise>=6.6,<7
