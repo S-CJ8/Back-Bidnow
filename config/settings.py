@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 from dotenv import load_dotenv
 
@@ -83,18 +84,55 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
+
+def _database_from_url(url: str) -> dict:
+    """Parsea DATABASE_URL (Render suele dar postgres:// o postgresql://)."""
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://") :]
+    parsed = urlparse(url)
+    path = (parsed.path or "").lstrip("/")
+    db_name = path.split("?")[0] if path else ""
+    password = unquote(parsed.password) if parsed.password else ""
+    user = unquote(parsed.username) if parsed.username else ""
+    return {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": db_name,
+        "USER": user,
+        "PASSWORD": password,
+        "HOST": parsed.hostname or "",
+        "PORT": str(parsed.port or 5432),
+        "OPTIONS": {"sslmode": "require"},
+    }
+
+
+def _database_from_env() -> dict:
+    raw_url = os.getenv("DATABASE_URL", "").strip()
+    if raw_url:
+        return _database_from_url(raw_url)
+
+    host = os.getenv("DB_HOST", "localhost")
+    port = os.getenv("DB_PORT", "5432")
+    require_ssl = os.getenv("DB_SSL_REQUIRE", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    ) or (host and ".render.com" in host)
+    options = {"sslmode": "require"} if require_ssl else {}
+
+    return {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "subastas"),
         "USER": os.getenv("DB_USER", "postgres"),
         "PASSWORD": os.getenv("DB_PASSWORD")
         or os.getenv("POSTGRES_PASSWORD")
         or "",
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "5432"),
+        "HOST": host,
+        "PORT": port,
+        "OPTIONS": options,
     }
-}
+
+
+DATABASES = {"default": _database_from_env()}
 
 
 # Password validation

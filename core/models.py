@@ -10,7 +10,6 @@ class Usuario(models.Model):
 
     class Meta:
         db_table = "usuario"
-        managed = False
 
     def __str__(self):
         return self.correo or str(self.id_usuario)
@@ -30,7 +29,6 @@ class MetodoPago(models.Model):
 
     class Meta:
         db_table = "metodo_pago"
-        managed = False
 
 
 class Producto(models.Model):
@@ -51,7 +49,6 @@ class Producto(models.Model):
 
     class Meta:
         db_table = "producto"
-        managed = False
 
 
 class Subasta(models.Model):
@@ -76,7 +73,6 @@ class Subasta(models.Model):
 
     class Meta:
         db_table = "subasta"
-        managed = False
 
 
 class Puja(models.Model):
@@ -100,7 +96,6 @@ class Puja(models.Model):
 
     class Meta:
         db_table = "puja"
-        managed = False
 
 
 class Transaccion(models.Model):
@@ -134,4 +129,3 @@ class Transaccion(models.Model):
 
     class Meta:
         db_table = "transaccion"
-        managed = False
