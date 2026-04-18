@@ -39,12 +39,39 @@ ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS if h.strip()]
 if os.environ.get("RENDER") and ".onrender.com" not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(".onrender.com")
 
-CSRF_TRUSTED_ORIGINS = [
-    o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
-]
+def _csv_urls(name: str, default: str = "") -> list[str]:
+    return [x.strip() for x in os.getenv(name, default).split(",") if x.strip()]
+
+
+CSRF_TRUSTED_ORIGINS = _csv_urls("CSRF_TRUSTED_ORIGINS")
 _render_url = os.getenv("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
 if _render_url and _render_url not in CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS.append(_render_url)
+
+# Front Static Site (Render) + Vite local. URLs exactas, sin comodines (CORS/CSRF).
+# https://front-bidnow.onrender.com — sitio publico del front en Render.
+_FRONT_STATIC_RENDER = "https://front-bidnow.onrender.com"
+_FRONT_LOCAL_VITE = ("http://localhost:5173", "http://127.0.0.1:5173")
+
+FRONTEND_ORIGINS = _csv_urls("FRONTEND_ORIGINS")
+if os.environ.get("RENDER"):
+    for _u in (_FRONT_STATIC_RENDER, *_FRONT_LOCAL_VITE):
+        if _u not in FRONTEND_ORIGINS:
+            FRONTEND_ORIGINS.append(_u)
+elif DEBUG:
+    for _u in _FRONT_LOCAL_VITE:
+        if _u not in FRONTEND_ORIGINS:
+            FRONTEND_ORIGINS.append(_u)
+for _origin in FRONTEND_ORIGINS:
+    if _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origin)
+
+CORS_ALLOWED_ORIGINS = list(FRONTEND_ORIGINS)
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
 # Application definition
 
@@ -55,12 +82,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'drf_spectacular',
     'core',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
