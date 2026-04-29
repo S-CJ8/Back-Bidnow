@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qsl, unquote, urlparse
 
 from dotenv import load_dotenv
 
@@ -122,32 +122,28 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-
-def _database_from_url(url: str) -> dict:
-    """Parsea DATABASE_URL (Render suele dar postgres:// o postgresql://)."""
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://") :]
-    parsed = urlparse(url)
-    path = (parsed.path or "").lstrip("/")
-    db_name = path.split("?")[0] if path else ""
-    password = unquote(parsed.password) if parsed.password else ""
-    user = unquote(parsed.username) if parsed.username else ""
-    return {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": db_name,
-        "USER": user,
-        "PASSWORD": password,
-        "HOST": parsed.hostname or "",
-        "PORT": str(parsed.port or 5432),
-        "OPTIONS": {"sslmode": "require"},
-    }
+#
+# Si existe DATABASE_URL (Neon / Render Postgres), se usa el patrón recomendado por Neon:
+# OPTIONS se arma desde el querystring (sslmode, channel_binding, etc.).
 
 
 def _database_from_env() -> dict:
     raw_url = os.getenv("DATABASE_URL", "").strip()
     if raw_url:
-        return _database_from_url(raw_url)
+        if raw_url.startswith("postgres://"):
+            raw_url = "postgresql://" + raw_url[len("postgres://") :]
+        tmp = urlparse(raw_url)
+        db_name = (tmp.path or "").lstrip("/").split("?")[0]
+        options = dict(parse_qsl(tmp.query))
+        return {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": db_name,
+            "USER": unquote(tmp.username) if tmp.username else "",
+            "PASSWORD": unquote(tmp.password) if tmp.password else "",
+            "HOST": tmp.hostname or "",
+            "PORT": tmp.port or 5432,
+            "OPTIONS": options,
+        }
 
     host = os.getenv("DB_HOST", "localhost")
     port = os.getenv("DB_PORT", "5432")
