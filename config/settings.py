@@ -123,8 +123,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 #
-# Si existe DATABASE_URL (Neon / Render Postgres), se usa el patrón recomendado por Neon:
-# OPTIONS se arma desde el querystring (sslmode, channel_binding, etc.).
+# Si existe DATABASE_URL (Render Postgres), se parsea completa:
+# OPTIONS se arma desde el querystring (ej. sslmode=require).
 
 
 def _database_from_env() -> dict:
