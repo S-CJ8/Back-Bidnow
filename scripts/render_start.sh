@@ -58,6 +58,18 @@ PY
   exit "${MIGRATE_EXIT}"
 fi
 
+# Admin de Django usa auth_user, no la tabla core.usuario ni el usuario de Postgres.
+# Primera vez en producción: BOOTSTRAP_DJANGO_SUPERUSER=1 + variables abajo; luego quita BOOTSTRAP.
+if [[ "${BOOTSTRAP_DJANGO_SUPERUSER:-}" == "1" ]]; then
+  if [[ -n "${DJANGO_SUPERUSER_USERNAME:-}" && -n "${DJANGO_SUPERUSER_PASSWORD:-}" ]]; then
+    echo "==> Superusuario Django (createsuperuser --noinput; ignora error si ya existe)..."
+    export DJANGO_SUPERUSER_EMAIL="${DJANGO_SUPERUSER_EMAIL:-admin@example.com}"
+    python manage.py createsuperuser --noinput 2>&1 || true
+  else
+    echo "==> BOOTSTRAP_DJANGO_SUPERUSER=1: defina DJANGO_SUPERUSER_USERNAME y DJANGO_SUPERUSER_PASSWORD" >&2
+  fi
+fi
+
 echo "==> Gunicorn 0.0.0.0:${PORT} workers=${WEB_CONCURRENCY:-1}"
 exec python -m gunicorn config.wsgi:application \
   --bind "0.0.0.0:${PORT}" \
