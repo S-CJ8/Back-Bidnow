@@ -135,12 +135,21 @@ def _database_from_env() -> dict:
         tmp = urlparse(raw_url)
         db_name = (tmp.path or "").lstrip("/").split("?")[0]
         options = dict(parse_qsl(tmp.query))
+        host = tmp.hostname or ""
+        # Render Postgres externo exige TLS; si DATABASE_URL no trae ?sslmode=..., la conexión falla.
+        require_ssl = os.getenv("DB_SSL_REQUIRE", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        ) or (host and ".render.com" in host)
+        if require_ssl:
+            options.setdefault("sslmode", "require")
         return {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": db_name,
             "USER": unquote(tmp.username) if tmp.username else "",
             "PASSWORD": unquote(tmp.password) if tmp.password else "",
-            "HOST": tmp.hostname or "",
+            "HOST": host,
             "PORT": tmp.port or 5432,
             "OPTIONS": options,
         }
