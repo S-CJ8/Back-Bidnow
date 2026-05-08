@@ -1,0 +1,2 @@
+# Evita CRLF en scripts que solo corren en Linux (Render).
+*.sh text eol=lf

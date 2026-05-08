@@ -1,1 +1,1 @@
-web: python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --capture-output --access-logfile - --error-logfile -
+web: bash scripts/render_start.sh
