@@ -15,7 +15,6 @@ import sys
 from pathlib import Path
 from urllib.parse import parse_qsl, unquote, urlparse
 
-from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -151,15 +150,18 @@ def _normalize_postgres_host(host: str) -> str:
         if not suffix.startswith("."):
             suffix = "." + suffix
         return host + suffix
-    if os.environ.get("RENDER") and not _management_cmd_allows_short_pg_host():
-        raise ImproperlyConfigured(
-            "DATABASE_URL (o DB_HOST) usa un host PostgreSQL corto sin dominio "
-            f"({host!r}), que no resuelve por DNS.\n"
-            "Opciones en Render: (1) Pega la External Database URL completa "
-            "(host tipo ...REGION-postgres.render.com); o (2) enlaza la BD al "
-            "servicio web; o (3) define DATABASE_HOST_SUFFIX con la región, "
-            "por ejemplo DATABASE_HOST_SUFFIX=.oregon-postgres.render.com"
-        )
+    # En Render suele pegarse el host corto del dashboard; el FQDN público es host + región.
+    if os.environ.get("RENDER"):
+        if _management_cmd_allows_short_pg_host():
+            return host
+        default = os.getenv(
+            "RENDER_DEFAULT_PG_HOST_SUFFIX",
+            ".oregon-postgres.render.com",
+        ).strip()
+        if default:
+            if not default.startswith("."):
+                default = "." + default
+            return host + default
     return host
 
 
