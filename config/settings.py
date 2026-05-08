@@ -67,6 +67,20 @@ for _origin in FRONTEND_ORIGINS:
     if _origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(_origin)
 
+# Render (reverse proxy): sin esto el admin puede fallar (CSRF / cookies / is_secure).
+if os.environ.get("RENDER"):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    USE_X_FORWARDED_HOST = True
+    # Origen del propio backend (login POST /admin); RENDER_EXTERNAL_URL a veces vacío en build.
+    _render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
+    if _render_host:
+        _api_origin = f"https://{_render_host}".rstrip("/")
+        if _api_origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_api_origin)
+    if not DEBUG:
+        SESSION_COOKIE_SECURE = True
+        CSRF_COOKIE_SECURE = True
+
 CORS_ALLOWED_ORIGINS = list(FRONTEND_ORIGINS)
 CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "").lower() in (
     "1",
