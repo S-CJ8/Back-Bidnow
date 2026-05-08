@@ -11,8 +11,52 @@ if [[ -z "${PORT:-}" ]]; then
   exit 1
 fi
 
-echo "==> Migraciones (verbose)..."
-python manage.py migrate --noinput --verbosity 2
+echo "==> Diagnóstico BD (sin contraseña)..."
+python - <<'PY'
+import os
+from urllib.parse import urlparse, unquote
+
+raw = (os.getenv("DATABASE_URL") or "").strip()
+if raw:
+    if raw.startswith("postgres://"):
+        raw = "postgresql://" + raw[len("postgres://") :]
+    u = urlparse(raw)
+    name = (u.path or "").lstrip("/").split("?")[0]
+    print("  DATABASE_URL: host=%r port=%r db=%r user=%r" % (
+        u.hostname,
+        u.port or 5432,
+        name,
+        unquote(u.username) if u.username else None,
+    ))
+else:
+    print("  DATABASE_URL no definida; usando DB_*")
+    print("  DB_HOST=%r DB_NAME=%r DB_USER=%r" % (
+        os.getenv("DB_HOST"),
+        os.getenv("DB_NAME"),
+        os.getenv("DB_USER"),
+    ))
+PY
+
+echo "==> Migraciones (verbose + traceback)..."
+set +e
+python manage.py migrate --noinput --verbosity 2 --traceback 2>&1
+MIGRATE_EXIT=$?
+set -e
+if [[ "${MIGRATE_EXIT}" -ne 0 ]]; then
+  echo "==> migrate falló con código ${MIGRATE_EXIT}. Comprobación Django..."
+  python manage.py check --database default --traceback 2>&1 || true
+  echo "==> Prueba de conexión (ensure_connection)..."
+  python - <<'PY' 2>&1 || true
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+import django
+django.setup()
+from django.db import connection
+connection.ensure_connection()
+print("  ensure_connection: OK")
+PY
+  exit "${MIGRATE_EXIT}"
+fi
 
 echo "==> Gunicorn 0.0.0.0:${PORT} workers=${WEB_CONCURRENCY:-1}"
 exec python -m gunicorn config.wsgi:application \
