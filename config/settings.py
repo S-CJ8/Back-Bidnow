@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from urllib.parse import parse_qsl, unquote, urlparse
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -127,6 +128,28 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # OPTIONS se arma desde el querystring (ej. sslmode=require).
 
 
+def _normalize_postgres_host(host: str) -> str:
+    """Render a veces muestra solo `dpg-xxxxx-a` (sin dominio); el DNS público no lo resuelve."""
+    host = (host or "").strip()
+    if not host or "." in host or not host.startswith("dpg-"):
+        return host
+    suffix = os.getenv("DATABASE_HOST_SUFFIX", "").strip()
+    if suffix:
+        if not suffix.startswith("."):
+            suffix = "." + suffix
+        return host + suffix
+    if os.environ.get("RENDER"):
+        raise ImproperlyConfigured(
+            "DATABASE_URL (o DB_HOST) usa un host PostgreSQL corto sin dominio "
+            f"({host!r}), que no resuelve por DNS.\n"
+            "Opciones en Render: (1) Pega la External Database URL completa "
+            "(host tipo ...REGION-postgres.render.com); o (2) enlaza la BD al "
+            "servicio web; o (3) define DATABASE_HOST_SUFFIX con la región, "
+            "por ejemplo DATABASE_HOST_SUFFIX=.oregon-postgres.render.com"
+        )
+    return host
+
+
 def _database_from_env() -> dict:
     raw_url = os.getenv("DATABASE_URL", "").strip()
     if raw_url:
@@ -135,7 +158,7 @@ def _database_from_env() -> dict:
         tmp = urlparse(raw_url)
         db_name = (tmp.path or "").lstrip("/").split("?")[0]
         options = dict(parse_qsl(tmp.query))
-        host = tmp.hostname or ""
+        host = _normalize_postgres_host(tmp.hostname or "")
         # Render Postgres externo exige TLS; si DATABASE_URL no trae ?sslmode=..., la conexión falla.
         require_ssl = os.getenv("DB_SSL_REQUIRE", "").lower() in (
             "1",
@@ -154,7 +177,7 @@ def _database_from_env() -> dict:
             "OPTIONS": options,
         }
 
-    host = os.getenv("DB_HOST", "localhost")
+    host = _normalize_postgres_host(os.getenv("DB_HOST", "localhost"))
     port = os.getenv("DB_PORT", "5432")
     require_ssl = os.getenv("DB_SSL_REQUIRE", "").lower() in (
         "1",
