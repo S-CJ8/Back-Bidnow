@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 from urllib.parse import parse_qsl, unquote, urlparse
 
@@ -128,6 +129,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # OPTIONS se arma desde el querystring (ej. sslmode=require).
 
 
+def _management_cmd_allows_short_pg_host() -> bool:
+    """collectstatic (build en Render) no usa la BD; no bloquear import de settings."""
+    if len(sys.argv) < 2:
+        return False
+    return sys.argv[1] in {
+        "collectstatic",
+        "findstatic",
+        "makemigrations",
+        "compilemessages",
+    }
+
+
 def _normalize_postgres_host(host: str) -> str:
     """Render a veces muestra solo `dpg-xxxxx-a` (sin dominio); el DNS público no lo resuelve."""
     host = (host or "").strip()
@@ -138,7 +151,7 @@ def _normalize_postgres_host(host: str) -> str:
         if not suffix.startswith("."):
             suffix = "." + suffix
         return host + suffix
-    if os.environ.get("RENDER"):
+    if os.environ.get("RENDER") and not _management_cmd_allows_short_pg_host():
         raise ImproperlyConfigured(
             "DATABASE_URL (o DB_HOST) usa un host PostgreSQL corto sin dominio "
             f"({host!r}), que no resuelve por DNS.\n"
