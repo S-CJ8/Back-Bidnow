@@ -35,6 +35,7 @@ class Producto(models.Model):
     id_producto = models.AutoField(primary_key=True)
     titulo = models.CharField(max_length=150, blank=True, null=True)
     descripcion = models.TextField(blank=True, null=True)
+    imagen = models.TextField(blank=True, null=True)
     precio_inicial = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True
     )

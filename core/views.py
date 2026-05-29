@@ -1,5 +1,5 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from rest_framework import viewsets
+from rest_framework import filters, viewsets
 
 from .models import MetodoPago, Producto, Puja, Subasta, Transaccion, Usuario
 from .serializers import (
@@ -25,6 +25,8 @@ from .serializers import (
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["correo", "nombre"]
 
 
 @extend_schema_view(
