@@ -281,6 +281,9 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20971520  # 20 MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+
 # Logs en consola (Render / Gunicorn): sin esto suele verse solo "GET ... 500" sin el motivo.
 _LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO").upper()
 LOGGING = {

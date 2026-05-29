@@ -100,33 +100,23 @@ class Puja(models.Model):
 
 
 class Transaccion(models.Model):
-    id_transaccion = models.AutoField(primary_key=True)
+    subasta = models.ForeignKey(
+        Subasta, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    usuario = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, blank=True
+    )
     monto_final = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True
+        max_digits=14, decimal_places=2, null=True, blank=True
     )
-    fecha = models.DateTimeField(blank=True, null=True)
-    subasta = models.OneToOneField(
-        Subasta,
-        on_delete=models.DO_NOTHING,
-        db_column="id_subasta",
-        related_name="transaccion",
-    )
-    ganador = models.ForeignKey(
-        Usuario,
-        on_delete=models.DO_NOTHING,
-        db_column="id_ganador",
-        related_name="transacciones_ganadas",
-        blank=True,
-        null=True,
-    )
-    metodo_pago = models.ForeignKey(
-        MetodoPago,
-        on_delete=models.DO_NOTHING,
-        db_column="id_metodo_pago",
-        related_name="transacciones",
-        blank=True,
-        null=True,
-    )
+    estado = models.CharField(max_length=50, blank=True, default="completada")
+    nombre_destinatario = models.CharField(max_length=200, blank=True)
+    direccion_envio = models.TextField(blank=True)
+    ciudad = models.CharField(max_length=100, blank=True)
+    pais = models.CharField(max_length=100, blank=True)
+    codigo_postal = models.CharField(max_length=20, blank=True)
+    numero_seguimiento = models.CharField(max_length=100, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True, null=True)
 
     class Meta:
         db_table = "transaccion"

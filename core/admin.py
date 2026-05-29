@@ -41,5 +41,6 @@ class PujaAdmin(admin.ModelAdmin):
 
 @admin.register(Transaccion)
 class TransaccionAdmin(admin.ModelAdmin):
-    list_display = ("id_transaccion", "monto_final", "fecha", "subasta", "ganador")
-    ordering = ("-id_transaccion",)
+    list_display = ("id", "estado", "monto_final", "subasta", "usuario", "fecha_creacion")
+    list_filter = ("estado",)
+    ordering = ("-id",)
